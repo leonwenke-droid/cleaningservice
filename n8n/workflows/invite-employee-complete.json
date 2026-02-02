@@ -1,0 +1,326 @@
+{
+  "name": "Invite Employee (Complete Flow)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "invite-employee",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 400],
+      "webhookId": "invite-employee"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate input\nconst payload = $input.item.json;\n\nif (!payload.email || !payload.role || !payload.companyId) {\n  throw new Error('Missing required fields: email, role, companyId');\n}\n\nif (!['admin', 'dispatcher', 'worker'].includes(payload.role)) {\n  throw new Error('Invalid role');\n}\n\nreturn {\n  email: payload.email.trim().toLowerCase(),\n  role: payload.role,\n  companyId: payload.companyId,\n  companyName: payload.companyName || 'the company'\n};"
+      },
+      "id": "validate",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 400]
+    },
+    {
+      "parameters": {
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "operation": "createUser",
+        "email": "={{ $json.email }}",
+        "userMetadata": "={{ JSON.stringify({ company_id: $json.companyId, role: $json.role }) }}",
+        "options": {
+          "emailRedirectTo": "https://yourdomain.com/auth/callback"
+        }
+      },
+      "id": "create-user",
+      "name": "Create User in Supabase",
+      "type": "@n8n/n8n-nodes-langchain.supabase",
+      "typeVersion": 1,
+      "position": [650, 400],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase Admin"
+        }
+      },
+      "notes": "Requires Supabase Admin API credentials"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "tableId": {
+          "__rl": true,
+          "value": "app_users",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $json('Create User in Supabase').id }}",
+            "company_id": "={{ $json.companyId }}",
+            "role": "={{ $json.role }}",
+            "email": "={{ $json.email }}"
+          }
+        }
+      },
+      "id": "create-profile",
+      "name": "Create Profile",
+      "type": "@n8n/n8n-nodes-langchain.supabase",
+      "typeVersion": 1,
+      "position": [850, 400],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase Admin"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL }}/auth/v1/admin/generate-link",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "type",
+              "value": "magiclink"
+            },
+            {
+              "name": "email",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "options",
+              "value": "={{ JSON.stringify({ redirectTo: 'https://yourdomain.com/auth/callback' }) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "generate-link",
+      "name": "Generate Magic Link",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1050, 400],
+      "notes": "Calls Supabase Admin API to generate magic link"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract magic link from Supabase response\nconst response = $input.item.json;\nconst magicLink = response.properties?.action_link || response.properties?.hashed_token;\n\nif (!magicLink) {\n  throw new Error('Failed to generate magic link');\n}\n\nreturn {\n  email: $json.email,\n  magicLink: magicLink,\n  role: $json.role,\n  companyName: $json.companyName\n};"
+      },
+      "id": "extract-link",
+      "name": "Extract Magic Link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 400]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.role }}",
+              "operation": "equals",
+              "value2": "admin"
+            }
+          ]
+        }
+      },
+      "id": "check-role",
+      "name": "Check Role",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [1450, 400]
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@yourdomain.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "Welcome to {{ $json.companyName }} - Admin Invitation",
+        "emailType": "html",
+        "message": "<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .button { display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }\n    .badge { display: inline-block; padding: 4px 8px; background-color: #28a745; color: white; border-radius: 3px; font-size: 12px; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <h1>Welcome to {{ $json.companyName }}!</h1>\n    <p>You've been invited to join as an <span class=\"badge\">Admin</span>.</p>\n    <p>As an admin, you'll have full access to manage users, companies, and all operations.</p>\n    <a href=\"{{ $json.magicLink }}\" class=\"button\">Accept Invitation & Sign In</a>\n    <p style=\"margin-top: 30px; font-size: 12px; color: #666;\">\n      Link: <a href=\"{{ $json.magicLink }}\">{{ $json.magicLink }}</a>\n    </p>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "send-admin-email",
+      "name": "Send Admin Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1650, 300],
+      "credentials": {
+        "smtp": {
+          "id": "1",
+          "name": "SMTP Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@yourdomain.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "Welcome to {{ $json.companyName }}",
+        "emailType": "html",
+        "message": "<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .button { display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }\n    .badge { display: inline-block; padding: 4px 8px; background-color: #6c757d; color: white; border-radius: 3px; font-size: 12px; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <h1>Welcome to {{ $json.companyName }}!</h1>\n    <p>You've been invited to join as a <span class=\"badge\">{{ $json.role }}</span>.</p>\n    <a href=\"{{ $json.magicLink }}\" class=\"button\">Accept Invitation & Sign In</a>\n    <p style=\"margin-top: 30px; font-size: 12px; color: #666;\">\n      Link: <a href=\"{{ $json.magicLink }}\">{{ $json.magicLink }}</a>\n    </p>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "send-employee-email",
+      "name": "Send Employee Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1650, 500],
+      "credentials": {
+        "smtp": {
+          "id": "1",
+          "name": "SMTP Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Invitation sent to \" + $json.email } }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1850, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "Create User in Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create User in Supabase": {
+      "main": [
+        [
+          {
+            "node": "Create Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Profile": {
+      "main": [
+        [
+          {
+            "node": "Generate Magic Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Magic Link": {
+      "main": [
+        [
+          {
+            "node": "Extract Magic Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Magic Link": {
+      "main": [
+        [
+          {
+            "node": "Check Role",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Role": {
+      "main": [
+        [
+          {
+            "node": "Send Admin Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Employee Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Admin Email": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Employee Email": {
+      "main": [
+        [
+          {
+            "node": "Respond",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-01-29T00:00:00.000Z",
+  "versionId": "1"
+}

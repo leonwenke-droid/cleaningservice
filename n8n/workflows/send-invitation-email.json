@@ -1,0 +1,175 @@
+{
+  "name": "Send Invitation Email (Supabase Webhook)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "user-invited",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "user-invited"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract user data from Supabase webhook payload\nconst payload = $input.item.json;\nconst user = payload.record || payload.new || payload;\n\n// Supabase webhook format: { type: 'INSERT', record: { ... } }\nconst userData = user.record || user;\n\nreturn {\n  email: userData.email,\n  userId: userData.id,\n  metadata: userData.user_metadata || {},\n  companyId: userData.user_metadata?.company_id || null,\n  role: userData.user_metadata?.role || 'worker',\n  rawData: userData\n};"
+      },
+      "id": "extract-data",
+      "name": "Extract User Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "tableId": {
+          "__rl": true,
+          "value": "companies",
+          "mode": "list"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "id",
+              "condition": "equal",
+              "keyValue": "={{ $json.companyId }}"
+            }
+          ]
+        }
+      },
+      "id": "get-company",
+      "name": "Get Company Info",
+      "type": "@n8n/n8n-nodes-langchain.supabase",
+      "typeVersion": 1,
+      "position": [650, 300],
+      "credentials": {
+        "supabaseApi": {
+          "id": "1",
+          "name": "Supabase account"
+        }
+      },
+      "disabled": true,
+      "notes": "Optional: Fetch company name for email template"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Generate magic link using Supabase Admin API\n// Note: You'll need to configure Supabase credentials in n8n\nconst email = $json.email;\nconst redirectUrl = process.env.SUPABASE_REDIRECT_URL || 'https://yourdomain.com/auth/callback';\nconst supabaseUrl = process.env.SUPABASE_URL;\n\n// For now, return a placeholder - you'll need to call Supabase Admin API\n// or generate the link in your Next.js API route\nreturn {\n  email: email,\n  magicLink: `${supabaseUrl}/auth/v1/verify?token=GENERATE_VIA_API&type=magiclink&redirect_to=${redirectUrl}`,\n  companyName: $json.companyId ? 'Your Company' : 'the company',\n  role: $json.role\n};"
+      },
+      "id": "generate-link",
+      "name": "Generate Magic Link",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300],
+      "notes": "You'll need to call Supabase Admin API to generate the actual magic link token"
+    },
+    {
+      "parameters": {
+        "fromEmail": "noreply@yourdomain.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "You've been invited to {{ $json.companyName }}",
+        "emailType": "html",
+        "message": "<!DOCTYPE html>\n<html>\n<head>\n  <style>\n    body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }\n    .container { max-width: 600px; margin: 0 auto; padding: 20px; }\n    .button { display: inline-block; padding: 12px 24px; background-color: #007bff; color: white; text-decoration: none; border-radius: 5px; margin: 20px 0; }\n    .button:hover { background-color: #0056b3; }\n  </style>\n</head>\n<body>\n  <div class=\"container\">\n    <h1>Welcome to {{ $json.companyName }}!</h1>\n    <p>You've been invited to join as a <strong>{{ $json.role }}</strong>.</p>\n    <p>Click the button below to sign in and get started:</p>\n    <a href=\"{{ $json.magicLink }}\" class=\"button\">Sign In</a>\n    <p style=\"margin-top: 30px; font-size: 12px; color: #666;\">\n      If the button doesn't work, copy and paste this link into your browser:<br>\n      <a href=\"{{ $json.magicLink }}\">{{ $json.magicLink }}</a>\n    </p>\n    <p style=\"font-size: 12px; color: #666;\">\n      This link will expire in 1 hour.\n    </p>\n  </div>\n</body>\n</html>",
+        "options": {}
+      },
+      "id": "send-email",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2,
+      "position": [1050, 300],
+      "credentials": {
+        "smtp": {
+          "id": "1",
+          "name": "SMTP Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"success\": true, \"message\": \"Invitation email sent to \" + $json.email } }}"
+      },
+      "id": "respond",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Extract User Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract User Data": {
+      "main": [
+        [
+          {
+            "node": "Get Company Info",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Generate Magic Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Company Info": {
+      "main": [
+        [
+          {
+            "node": "Generate Magic Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Magic Link": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2026-01-29T00:00:00.000Z",
+  "versionId": "1"
+}
