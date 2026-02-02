@@ -10,39 +10,14 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     async function handleAuthCallback() {
-      const supabase = createSupabaseBrowserClient();
-
-      // Check for code in query params (server-side flow)
+      // Code flow: let the server exchange the code (server has env vars at runtime on Vercel)
       const code = searchParams.get("code");
       if (code) {
-        console.log("Exchanging code for session...");
-        const { error, data } = await supabase.auth.exchangeCodeForSession(code);
-        
-        if (error) {
-          console.error("Auth callback error:", error);
-          router.push(`/login?error=${encodeURIComponent(error.message || "Authentication failed")}`);
-          return;
-        }
-
-        if (data.session) {
-          console.log("Session created successfully");
-          // Check if user has profile and redirect accordingly
-          const { data: profile } = await supabase
-            .from("app_users")
-            .select("id, company_id")
-            .eq("id", data.session.user.id)
-            .single();
-
-          if (!profile) {
-            router.push("/onboarding");
-          } else {
-            router.push("/");
-          }
-        } else {
-          router.push("/login?error=" + encodeURIComponent("No session created"));
-        }
+        window.location.href = `/api/auth/exchange?code=${encodeURIComponent(code)}`;
         return;
       }
+
+      const supabase = createSupabaseBrowserClient();
 
       // Check for tokens in hash fragment (client-side flow)
       if (typeof window !== "undefined") {
