@@ -132,13 +132,21 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log("Generated invitation magic link:", linkData.properties.action_link.substring(0, 100) + "...");
+    // Supabase verify endpoint needs apikey when user clicks the link (browser has no header)
+    let inviteMagicLink = linkData.properties.action_link;
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    if (anonKey && inviteMagicLink.includes("supabase.co")) {
+      const sep = inviteMagicLink.includes("?") ? "&" : "?";
+      inviteMagicLink = `${inviteMagicLink}${sep}apikey=${encodeURIComponent(anonKey)}`;
+    }
+
+    console.log("Generated invitation magic link:", inviteMagicLink.substring(0, 100) + "...");
 
     // Send invitation email via n8n
     try {
       await sendMagicLinkViaN8N({
         email: email.trim(),
-        magicLink: linkData.properties.action_link,
+        magicLink: inviteMagicLink,
         type: "invite",
         role,
         companyName,

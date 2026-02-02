@@ -35,11 +35,20 @@ export async function POST(request: Request) {
       );
     }
 
-    console.log("Generated magic link (full):", data.properties.action_link);
-    console.log("Generated magic link (first 200 chars):", data.properties.action_link.substring(0, 200));
-    
+    // Supabase's verify endpoint requires the anon key when the user clicks the link
+    // (the browser request has no header). Append it so the redirect works on Vercel.
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    let magicLink = data.properties.action_link;
+    if (anonKey && magicLink.includes("supabase.co")) {
+      const separator = magicLink.includes("?") ? "&" : "?";
+      magicLink = `${magicLink}${separator}apikey=${encodeURIComponent(anonKey)}`;
+    }
+
+    console.log("Generated magic link (full):", magicLink);
+    console.log("Generated magic link (first 200 chars):", magicLink.substring(0, 200));
+
     // Check if the link contains the redirect URL
-    if (data.properties.action_link.includes(callbackUrl)) {
+    if (magicLink.includes(callbackUrl)) {
       console.log("✅ Magic link contains callback URL");
     } else {
       console.warn("⚠️ Magic link does NOT contain expected callback URL:", callbackUrl);
@@ -49,7 +58,7 @@ export async function POST(request: Request) {
     try {
       await sendMagicLinkViaN8N({
         email: email.trim(),
-        magicLink: data.properties.action_link,
+        magicLink,
         type: "login",
       });
     } catch (n8nError) {
