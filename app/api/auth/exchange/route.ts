@@ -11,10 +11,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/login?error=Missing+code", request.url));
   }
 
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  // Server-only vars so they're available at runtime on Vercel (not just at build)
+  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) {
-    console.error("Exchange: missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
+    console.error("Exchange: missing SUPABASE_URL/SUPABASE_ANON_KEY (or NEXT_PUBLIC_*)");
     return NextResponse.redirect(new URL("/login?error=Server+config+missing", request.url));
   }
 

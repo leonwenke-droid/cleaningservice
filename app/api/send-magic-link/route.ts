@@ -35,13 +35,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Supabase's verify endpoint requires the anon key when the user clicks the link
-    // (the browser request has no header). Append it so the redirect works on Vercel.
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    // Supabase's verify endpoint requires the anon key when the user clicks the link.
+    // Use server-only var first so it's guaranteed at runtime on Vercel.
+    const anonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     let magicLink = data.properties.action_link;
     if (anonKey && magicLink.includes("supabase.co")) {
       const separator = magicLink.includes("?") ? "&" : "?";
       magicLink = `${magicLink}${separator}apikey=${encodeURIComponent(anonKey)}`;
+    } else if (!anonKey) {
+      console.error("send-magic-link: SUPABASE_ANON_KEY and NEXT_PUBLIC_SUPABASE_ANON_KEY both missing – link will fail with 'No API key'");
     }
 
     console.log("Generated magic link (full):", magicLink);

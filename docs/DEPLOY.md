@@ -10,6 +10,8 @@ Wherever you deploy (Vercel, Netlify, Railway, etc.), open **Project → Setting
 |----------|----------|-------------|
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Your Supabase project URL (e.g. `https://xxxx.supabase.co`) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon/public key (Dashboard → Settings → API) |
+| **`SUPABASE_URL`** | Yes on Vercel | Same as project URL. Used by server (magic link + auth exchange) at **runtime**. |
+| **`SUPABASE_ANON_KEY`** | Yes on Vercel | Same as anon key. Used by server at **runtime** so magic link and exchange work. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (for admin: invite users, init checklist) |
 | `NEXT_PUBLIC_SITE_URL` | Yes in prod | Your deployed app URL (e.g. `https://your-app.vercel.app`) — needed for auth redirects and magic links |
 | `N8N_WEBHOOK_URL` | No | n8n webhook URL if you use invite/magic-link emails |
@@ -44,11 +46,11 @@ Supabase returns this when the app’s client sends a request without the anon k
 1. **`NEXT_PUBLIC_SUPABASE_URL`** and **`NEXT_PUBLIC_SUPABASE_ANON_KEY`** are missing, or were not available when the project was **built**.  
    In Next.js, `NEXT_PUBLIC_*` values are inlined at **build** time. If they aren’t set for the build, the browser bundle has no key and Supabase rejects the request.
 
-2. **Fix:** In Vercel → Project → Settings → Environment Variables, add (or edit):
-   - `NEXT_PUBLIC_SUPABASE_URL` = your Supabase project URL  
-   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = your Supabase anon key (Dashboard → Settings → API)
+2. **Fix:** In Vercel → Project → Settings → Environment Variables, add (same values as your Supabase URL and anon key):
+   - **`SUPABASE_URL`** = `https://xxxx.supabase.co`
+   - **`SUPABASE_ANON_KEY`** = your Supabase anon key (Dashboard → Settings → API → anon/public)
 
-   For each variable, enable **Build** (or "All"), not only Production. Then trigger a **new deploy** (Redeploy) so a fresh build runs with these values. Old deployments keep the old (empty) bundle.
+   Enable **Production**. These are used by API routes at runtime. Redeploy, then request a **new** magic link.
 
 ## Local development
 

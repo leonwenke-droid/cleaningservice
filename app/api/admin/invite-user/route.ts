@@ -132,9 +132,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Supabase verify endpoint needs apikey when user clicks the link (browser has no header)
+    // Supabase verify endpoint needs apikey when user clicks the link.
+    const anonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     let inviteMagicLink = linkData.properties.action_link;
-    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (anonKey && inviteMagicLink.includes("supabase.co")) {
       const sep = inviteMagicLink.includes("?") ? "&" : "?";
       inviteMagicLink = `${inviteMagicLink}${sep}apikey=${encodeURIComponent(anonKey)}`;
