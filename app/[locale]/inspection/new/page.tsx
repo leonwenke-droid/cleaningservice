@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { TopBar } from "@/components/TopBar";
 import { getSessionAndProfile } from "@/lib/auth/server";
@@ -7,15 +8,20 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CreateInspectionForm } from "@/components/inspection/CreateInspectionForm";
 
 type PageProps = {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{ lead_id?: string }> | { lead_id?: string };
 };
 
-export default async function InspectionNewPage({ searchParams }: PageProps) {
+export default async function InspectionNewPage({ params, searchParams }: PageProps) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations();
+
   const { session, profile } = await getSessionAndProfile();
-  if (!session) redirect("/login");
+  if (!session) redirect(`/${locale}/login`);
 
   const canCreate = profile.role === "admin" || profile.role === "dispatcher";
-  if (!canCreate) redirect("/");
+  if (!canCreate) redirect(`/${locale}`);
 
   const resolvedSearchParams = await searchParams;
   const leadId = resolvedSearchParams?.lead_id;
@@ -42,10 +48,10 @@ export default async function InspectionNewPage({ searchParams }: PageProps) {
   return (
     <>
       <TopBar
-        title="New inspection"
+        title={t("inspection.new")}
         right={
-          <Link className="pill" href="/inspections">
-            Back
+          <Link className="pill" href={`/${locale}/inspections`}>
+            {t("common.back")}
           </Link>
         }
       />

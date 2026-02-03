@@ -3,6 +3,7 @@ import type { Session } from "@supabase/supabase-js";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { AppUserProfile } from "@/lib/auth/types";
+import { defaultLocale } from "@/lib/i18n-constants";
 
 export async function getSessionAndProfile(): Promise<{
   session: Session | null;
@@ -42,8 +43,7 @@ export async function getSessionAndProfile(): Promise<{
 
   if (error || !profile) {
     // If a user exists in auth but isn't mapped to a company yet, redirect to onboarding
-    // Note: This redirect will be handled by middleware to add locale prefix
-    redirect("/onboarding");
+    redirect(`/${defaultLocale}/onboarding`);
   }
 
   return { session, profile };

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { defaultLocale } from "@/lib/i18n-constants";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function AuthCallbackPage() {
               : error === "access_denied" 
                 ? "This magic link has expired. Please request a new one."
                 : error || "Authentication failed";
-            router.push(`/login?error=${encodeURIComponent(errorMsg)}`);
+            router.push(`/${defaultLocale}/login?error=${encodeURIComponent(errorMsg)}`);
             return;
           }
 
@@ -50,7 +51,7 @@ export default function AuthCallbackPage() {
 
             if (sessionError) {
               console.error("Error setting session:", sessionError);
-              router.push(`/login?error=${encodeURIComponent(sessionError.message || "Failed to set session")}`);
+              router.push(`/${defaultLocale}/login?error=${encodeURIComponent(sessionError.message || "Failed to set session")}`);
               return;
             }
 
@@ -64,12 +65,12 @@ export default function AuthCallbackPage() {
                 .single();
 
               if (!profile) {
-                router.push("/onboarding");
+                router.push(`/${defaultLocale}/onboarding`);
               } else {
-                router.push("/");
+                router.push(`/${defaultLocale}`);
               }
             } else {
-              router.push("/login?error=" + encodeURIComponent("No session created"));
+              router.push(`/${defaultLocale}/login?error=` + encodeURIComponent("No session created"));
             }
             return;
           }
@@ -78,7 +79,7 @@ export default function AuthCallbackPage() {
 
       // No code or tokens found
       console.error("No authentication code or tokens found");
-      router.push("/login?error=" + encodeURIComponent("Missing authentication code"));
+      router.push(`/${defaultLocale}/login?error=` + encodeURIComponent("Missing authentication code"));
     }
 
     handleAuthCallback();

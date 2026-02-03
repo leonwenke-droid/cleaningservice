@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { defaultLocale } from "@/lib/i18n-constants";
 
 export function RegisterCompanyForm() {
   const router = useRouter();
@@ -38,7 +39,7 @@ export function RegisterCompanyForm() {
       setError(null);
       // Optionally redirect to login after a delay
       setTimeout(() => {
-        router.push("/login?message=invitation-sent");
+        router.push(`/${defaultLocale}/login?message=invitation-sent`);
       }, 2000);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to register company");

@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useLocale } from "next-intl";
 
 type Props = {
   userEmail: string;
@@ -9,6 +10,7 @@ type Props = {
 
 export function CreateCompanyForm({ userEmail }: Props) {
   const router = useRouter();
+  const locale = useLocale();
   const [companyName, setCompanyName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +41,7 @@ export function CreateCompanyForm({ userEmail }: Props) {
       }
 
       // Redirect to dashboard
-      router.push("/");
+      router.push(`/${locale}`);
       router.refresh();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to create company");

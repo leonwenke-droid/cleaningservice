@@ -1,17 +1,26 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { TopBar } from "@/components/TopBar";
 import { getSessionAndProfile } from "@/lib/auth/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CompanySettingsForm } from "@/components/admin/CompanySettingsForm";
 
-export default async function AdminCompanyPage() {
+export default async function AdminCompanyPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations();
+
   const { session, profile } = await getSessionAndProfile();
-  if (!session) redirect("/login");
+  if (!session) redirect(`/${locale}/login`);
 
   if (profile.role !== "admin") {
-    redirect("/");
+    redirect(`/${locale}`);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -25,17 +34,17 @@ export default async function AdminCompanyPage() {
     return (
       <>
         <TopBar
-          title="Company Settings"
+          title={t("admin.companySettings")}
           right={
-            <Link className="pill" href="/">
-              Home
+            <Link className="pill" href={`/${locale}`}>
+              {t("navigation.home")}
             </Link>
           }
         />
         <main className="container">
           <div className="card">
-            <div style={{ fontWeight: 900 }}>Error</div>
-            <div className="muted">{error?.message || "Company not found"}</div>
+            <div style={{ fontWeight: 900 }}>{t("common.error")}</div>
+            <div className="muted">{error?.message || t("errors.notFound")}</div>
           </div>
         </main>
       </>
@@ -45,21 +54,21 @@ export default async function AdminCompanyPage() {
   return (
     <>
       <TopBar
-        title="Company Settings"
+        title={t("admin.companySettings")}
         right={
-          <Link className="pill" href="/">
-            Home
+          <Link className="pill" href={`/${locale}`}>
+            {t("navigation.home")}
           </Link>
         }
       />
       <main className="container">
         <div className="card">
-          <div style={{ fontWeight: 900, marginBottom: 6 }}>Company Information</div>
+          <div style={{ fontWeight: 900, marginBottom: 6 }}>{t("admin.companyInformation")}</div>
           <div className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
-            Company ID: {company.id}
+            {t("inspection.companyId")}: {company.id}
           </div>
           <div className="muted" style={{ fontSize: 13, marginBottom: 16 }}>
-            Created: {new Date(company.created_at).toLocaleDateString("de-DE")}
+            {t("admin.created")}: {new Date(company.created_at).toLocaleDateString("de-DE")}
           </div>
           <CompanySettingsForm companyId={company.id} currentName={company.name} />
         </div>

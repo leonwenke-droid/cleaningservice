@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { TopBar } from "@/components/TopBar";
 import { getSessionAndProfile } from "@/lib/auth/server";
@@ -9,19 +10,27 @@ import { DeleteLeadButton } from "@/components/lead/DeleteLeadButton";
 type LeadRow = {
   id: string;
   title: string | null;
-  status: "new" | "qualifying" | "qualified" | "inspection_scheduled" | "inspected" | "quoted" | "won" | "lost";
+  status: string;
   description: string | null;
   customer_id: string | null;
   site_id: string | null;
   created_at: string;
 };
 
-export default async function LeadsPage() {
+export default async function LeadsPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations();
+
   const { session, profile } = await getSessionAndProfile();
-  if (!session) redirect("/login");
+  if (!session) redirect(`/${locale}/login`);
 
   const canView = profile.role === "admin" || profile.role === "dispatcher";
-  if (!canView) redirect("/");
+  if (!canView) redirect(`/${locale}`);
 
   const supabase = await createSupabaseServerClient();
 
@@ -36,16 +45,16 @@ export default async function LeadsPage() {
     return (
       <>
         <TopBar
-          title="Leads"
+          title={t("lead.title")}
           right={
-            <Link className="pill" href="/">
-              Home
+            <Link className="pill" href={`/${locale}`}>
+              {t("navigation.home")}
             </Link>
           }
         />
         <main className="container">
           <div className="card">
-            <div style={{ fontWeight: 900 }}>Error</div>
+            <div style={{ fontWeight: 900 }}>{t("common.error")}</div>
             <div className="muted">{error.message}</div>
           </div>
         </main>
@@ -61,20 +70,20 @@ export default async function LeadsPage() {
     inspected: "#6366f1",
     quoted: "#ec4899",
     won: "#10b981",
-    lost: "#ef4444"
+    lost: "#ef4444",
   };
 
   return (
     <>
       <TopBar
-        title="Leads"
+        title={t("lead.title")}
         right={
           <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <Link className="pill" href="/lead/new">
-              New
+            <Link className="pill" href={`/${locale}/lead/new`}>
+              {t("lead.new")}
             </Link>
-            <Link className="pill" href="/">
-              Home
+            <Link className="pill" href={`/${locale}`}>
+              {t("navigation.home")}
             </Link>
           </div>
         }
@@ -85,13 +94,13 @@ export default async function LeadsPage() {
             leads.map((lead) => (
               <div key={lead.id} className="card">
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 8 }}>
-                  <div style={{ fontWeight: 800 }}>{lead.title || "Untitled"}</div>
+                  <div style={{ fontWeight: 800 }}>{lead.title || t("common.noName")}</div>
                   <span
                     className="pill"
                     style={{
-                      backgroundColor: statusColors[lead.status] + "20",
-                      borderColor: statusColors[lead.status],
-                      color: statusColors[lead.status]
+                      backgroundColor: (statusColors[lead.status] || "#6b7280") + "20",
+                      borderColor: statusColors[lead.status] || "#6b7280",
+                      color: statusColors[lead.status] || "#6b7280",
                     }}
                   >
                     {lead.status}
@@ -106,10 +115,10 @@ export default async function LeadsPage() {
                 <div style={{ marginTop: 10, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
                   <Link
                     className="btn"
-                    href={`/inspection/new?lead_id=${lead.id}`}
+                    href={`/${locale}/inspection/new?lead_id=${lead.id}`}
                     style={{ fontSize: 13, padding: "6px 10px" }}
                   >
-                    Create inspection
+                    {t("inspection.new")}
                   </Link>
                   {profile.role === "admin" && (
                     <DeleteLeadButton leadId={lead.id} companyId={profile.company_id} />
@@ -119,10 +128,10 @@ export default async function LeadsPage() {
             ))
           ) : (
             <div className="card">
-              <div style={{ fontWeight: 800 }}>No leads yet</div>
-              <div className="muted">Create your first lead to get started.</div>
-              <Link className="btn" href="/lead/new" style={{ marginTop: 12 }}>
-                Create lead
+              <div style={{ fontWeight: 800 }}>{t("lead.noLeads")}</div>
+              <div className="muted">{t("lead.noLeadsDescription")}</div>
+              <Link className="btn" href={`/${locale}/lead/new`} style={{ marginTop: 12 }}>
+                {t("lead.create")}
               </Link>
             </div>
           )}

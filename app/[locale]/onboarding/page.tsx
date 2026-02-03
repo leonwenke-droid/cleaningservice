@@ -1,10 +1,19 @@
 import { redirect } from "next/navigation";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { TopBar } from "@/components/TopBar";
 import { CreateCompanyForm } from "@/components/onboarding/CreateCompanyForm";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  setRequestLocale(locale);
+  const t = await getTranslations();
+
   const supabase = await createSupabaseServerClient();
   const {
     data: { user },
@@ -12,10 +21,9 @@ export default async function OnboardingPage() {
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    redirect("/login");
+    redirect(`/${locale}/login`);
   }
 
-  // Check if user already has a company
   const { data: profile } = await supabase
     .from("app_users")
     .select("company_id")
@@ -23,18 +31,17 @@ export default async function OnboardingPage() {
     .single();
 
   if (profile) {
-    // User already has a company, redirect to dashboard
-    redirect("/");
+    redirect(`/${locale}`);
   }
 
   return (
     <>
-      <TopBar title="Welcome" />
+      <TopBar title={t("onboarding.welcome")} />
       <main className="container">
         <div className="card">
-          <div style={{ fontWeight: 900, marginBottom: 8 }}>Create Your Company</div>
+          <div style={{ fontWeight: 900, marginBottom: 8 }}>{t("onboarding.createCompany")}</div>
           <div className="muted" style={{ marginBottom: 16 }}>
-            You need to create a company to get started. You'll be the administrator.
+            {t("onboarding.createCompanyDescription")}
           </div>
           <CreateCompanyForm userEmail={user.email || ""} />
         </div>

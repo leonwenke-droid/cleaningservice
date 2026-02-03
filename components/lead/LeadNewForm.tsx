@@ -3,7 +3,7 @@
 import type { FormEvent } from "react";
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useTranslations } from 'next-intl';
+import { useTranslations, useLocale } from 'next-intl';
 
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
@@ -14,6 +14,7 @@ type Props = {
 
 export function LeadNewForm({ companyId, createdBy }: Props) {
   const t = useTranslations();
+  const locale = useLocale();
   const supabase = useMemo(() => createSupabaseBrowserClient(), []);
 
   const [customerName, setCustomerName] = useState("");
@@ -138,7 +139,7 @@ export function LeadNewForm({ companyId, createdBy }: Props) {
             {createdLeadId}
           </div>
           <div style={{ marginTop: 10 }}>
-            <Link className="btn secondary" href="/">
+            <Link className="btn secondary" href={`/${locale}`}>
               {t('lead.backToDashboard')}
             </Link>
           </div>

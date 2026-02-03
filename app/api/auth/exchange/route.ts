@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
+import { defaultLocale } from "@/lib/i18n-constants";
 
 /**
  * Server-side code exchange for magic link.
@@ -8,7 +9,7 @@ import { createServerClient } from "@supabase/ssr";
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   if (!code) {
-    return NextResponse.redirect(new URL("/login?error=Missing+code", request.url));
+    return NextResponse.redirect(new URL(`/${defaultLocale}/login?error=Missing+code`, request.url));
   }
 
   // Server-only vars so they're available at runtime on Vercel (not just at build)
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
   const anonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !anonKey) {
     console.error("Exchange: missing SUPABASE_URL/SUPABASE_ANON_KEY (or NEXT_PUBLIC_*)");
-    return NextResponse.redirect(new URL("/login?error=Server+config+missing", request.url));
+    return NextResponse.redirect(new URL(`/${defaultLocale}/login?error=Server+config+missing`, request.url));
   }
 
   const cookieStore: string[] = [];
@@ -44,12 +45,12 @@ export async function GET(request: NextRequest) {
   if (error) {
     console.error("Exchange error:", error);
     return NextResponse.redirect(
-      new URL(`/login?error=${encodeURIComponent(error.message)}`, request.url)
+      new URL(`/${defaultLocale}/login?error=${encodeURIComponent(error.message)}`, request.url)
     );
   }
 
   if (!data.session) {
-    return NextResponse.redirect(new URL("/login?error=No+session", request.url));
+    return NextResponse.redirect(new URL(`/${defaultLocale}/login?error=No+session`, request.url));
   }
 
   // Decide redirect: onboarding if no profile, else home
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
     .single();
 
   const baseUrl = new URL(request.url).origin;
-  const redirectTo = profile ? "/" : "/onboarding";
+  const redirectTo = profile ? `/${defaultLocale}` : `/${defaultLocale}/onboarding`;
   const response = NextResponse.redirect(new URL(redirectTo, baseUrl));
   cookieStore.forEach((cookie) => {
     response.headers.append("Set-Cookie", cookie);
