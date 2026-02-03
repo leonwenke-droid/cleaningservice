@@ -111,8 +111,15 @@ export async function POST(request: Request) {
 
     const companyName = company?.name || "the company";
 
-    // Generate magic link using Supabase Admin API
-    const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    // Generate magic link (redirectTo must be full URL with https://)
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").trim();
+    const redirectUrl = !siteUrl
+      ? "http://localhost:3000"
+      : /^https?:\/\//i.test(siteUrl)
+        ? siteUrl
+        : siteUrl.startsWith("localhost")
+          ? `http://${siteUrl}`
+          : `https://${siteUrl}`;
     const callbackUrl = `${redirectUrl}/auth/callback`;
     console.log("Generating invitation magic link with redirectTo:", callbackUrl);
     

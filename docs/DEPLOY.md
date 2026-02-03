@@ -13,7 +13,7 @@ Wherever you deploy (Vercel, Netlify, Railway, etc.), open **Project → Setting
 | **`SUPABASE_URL`** | Yes on Vercel | Same as project URL. Used by server (magic link + auth exchange) at **runtime**. |
 | **`SUPABASE_ANON_KEY`** | Yes on Vercel | Same as anon key. Used by server at **runtime** so magic link and exchange work. |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key (for admin: invite users, init checklist) |
-| `NEXT_PUBLIC_SITE_URL` | Yes in prod | Your deployed app URL (e.g. `https://your-app.vercel.app`) — needed for auth redirects and magic links |
+| `NEXT_PUBLIC_SITE_URL` | Yes in prod | **Full URL with protocol**, e.g. `https://cleaningservice-six.vercel.app` — needed for auth redirects and magic links (missing `https://` breaks Supabase verify) |
 | `N8N_WEBHOOK_URL` | No | n8n webhook URL if you use invite/magic-link emails |
 
 Use the **same values** you have in `.env.local` locally; just type (or paste) them in the host’s UI. They are stored securely and never committed to Git.

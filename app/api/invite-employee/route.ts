@@ -24,8 +24,15 @@ export async function POST(request: Request) {
 
     const adminClient = createSupabaseAdminClient();
 
-    // Create user in Supabase Auth
-    const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "").trim();
+    const redirectUrl = !siteUrl
+      ? "http://localhost:3000"
+      : /^https?:\/\//i.test(siteUrl)
+        ? siteUrl
+        : siteUrl.startsWith("localhost")
+          ? `http://${siteUrl}`
+          : `https://${siteUrl}`;
+
     const { data: inviteData, error: inviteError } = await adminClient.auth.admin.inviteUserByEmail(
       email.trim(),
       {

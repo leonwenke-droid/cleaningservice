@@ -3,6 +3,13 @@ import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { sendMagicLinkViaN8N } from "@/lib/n8n/email";
 
+function normalizeSiteUrl(url: string | undefined): string {
+  const s = (url || "").trim();
+  if (!s) return "http://localhost:3000";
+  if (/^https?:\/\//i.test(s)) return s;
+  return /^localhost/i.test(s) ? `http://${s}` : `https://${s}`;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -13,9 +20,9 @@ export async function POST(request: Request) {
     }
 
     const adminClient = createSupabaseAdminClient();
-    const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const redirectUrl = normalizeSiteUrl(process.env.NEXT_PUBLIC_SITE_URL);
 
-    // Generate magic link using Supabase Admin API
+    // Generate magic link using Supabase Admin API (redirectTo must be a full URL with protocol)
     const callbackUrl = `${redirectUrl}/auth/callback`;
     console.log("Generating magic link with redirectTo:", callbackUrl);
     
