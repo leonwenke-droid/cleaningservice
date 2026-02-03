@@ -52,6 +52,18 @@ Supabase returns this when the app’s client sends a request without the anon k
 
    Enable **Production**. These are used by API routes at runtime. Redeploy, then request a **new** magic link.
 
+### "Request path is invalid"
+
+Supabase returns this when the **redirect URL** (where Supabase sends the user after verify) is **not** in your project’s **Redirect URLs** allowlist.
+
+1. Open **Supabase Dashboard** → **Authentication** → **URL configuration**.
+2. Under **Redirect URLs**, add this **exact** URL (no trailing slash, with `https://`):
+   - `https://cleaningservice-six.vercel.app/auth/callback`
+3. **Site URL** should be: `https://cleaningservice-six.vercel.app`
+4. Click **Save**. Then try a **new** magic link.
+
+If your app uses a different domain, use that domain in both Site URL and Redirect URLs (e.g. `https://your-domain.com/auth/callback`).
+
 ## Local development
 
 Copy `.env.example` to `.env.local`, fill in your real values, and run `npm run dev`. `.env.local` is gitignored and never pushed.
